@@ -12,15 +12,15 @@ library(tidyverse)
 
 # Introduction
 
-Our project aims to understand what specific risk factors are associated with five health outcomes: arthritis, cancer, hypertension, diabetes, obesity, and asthma, among a synthetic population of individuals aged 10-89. Specifically, we are curious to explore how both clinical factors (i.e. BMI, Blood Pressure) as well as lifestyle choices (alcohol consumption, diet) impact health. Additionally, we want to better understand whether or not various clinical & lifestyle predictors contribute to underlying health groupings, and whether or not these groupings are related to the four health outcomes listed above.
+Our project aims to understand what specific risk factors are associated with six health outcomes: arthritis, cancer, hypertension, diabetes, obesity, and asthma, among a synthetic population of individuals aged 10-89. Specifically, we are curious to explore how both clinical factors (i.e. BMI, Blood Pressure) as well as lifestyle choices (alcohol consumption, diet) impact health. Additionally, we want to better understand whether or not various clinical & lifestyle predictors contribute to underlying health groupings, and whether or not these groupings are related to the six health outcomes listed above.
 
 # Research Question
 
-Can we group individuals into underlying/latent health categories based on continuous clinical & lifestyle risk factors? Do these health categories differ in composition based on the health outcomes of arthritis, cancer, hypertension, diabetes, obesity, and asthma?
+Can we group individuals into underlying/latent health categories based on continuous clinical & lifestyle risk factors? Do these latent health categories have a significant association with the health outcomes of arthritis, cancer, hypertension, diabetes, obesity, and asthma?
 
 # Data
 
-For this project, we are using a dataset pulled from Kaggle titled "Healthcare Risk Factors Dataset" published by Abdalluh Ahmed. This dataset contains 30,000 entries with 20 variables relating to individuals' health conditions, including blood pressure, cholesterol, smoking status, BMI, and stress levels. The dataset was intentionally generated with missing values and noise to allow users to clean and pre-process the data before modeling. We believe this dataset is appropriate for this project given its complexity, as well as its connection to public health. A list of available variables is shown below:
+For this project, we are using a dataset pulled from Kaggle titled "Healthcare Risk Factors Dataset," published by Abdalluh Ahmed. This dataset contains 30,000 entries with 20 variables relating to individuals' health conditions, including blood pressure, cholesterol, smoking status, BMI, and stress levels. The synthetic dataset was intentionally generated with missing values and noise to allow users to clean and pre-process the data before modeling. We believe this dataset is appropriate for this project given its complexity, as well as its connection to public health. A list of available variables is shown below:
 
 ```{r, echo=FALSE, include=FALSE}
 #include= FALSE hides code chunk and output
@@ -32,9 +32,9 @@ healthcare_risk %>%
   names()
 ```
 
-Since this dataset provides numerous predictors, we want to see whether or not we can group individuals into underlying classes based on similarities across risk factors. Our outcome of interest is to better understand what groupings of risk factors are associated with the seven outcomes:
+Since this dataset provides numerous predictors, we want to see whether or not we can group individuals into underlying classes based on similarities across risk factors. Our outcome of interest is to better understand what groupings of risk factors are associated with the outcomes:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 library(viridis)
 healthcare_risk %>%
   filter(!is.na(`Medical Condition`)) %>%
@@ -45,7 +45,6 @@ healthcare_risk %>%
   theme_minimal() +
   ggtitle("Distribution of Medical Conditions")
 ```
-
 
 # Analysis Plan
 
