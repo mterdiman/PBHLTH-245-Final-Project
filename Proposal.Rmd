@@ -16,7 +16,7 @@ Our project aims to understand what specific risk factors are associated with fi
 
 # Research Question
 
-Can we group individuals into underlying health categories based on continuous clinical & lifestyle risk factors? Do these health categories differ in composition based on the health outcomes of arthritis, cancer, hypertension, diabetes, obesity, and asthma?
+Can we group individuals into underlying/latent health categories based on continuous clinical & lifestyle risk factors? Do these health categories differ in composition based on the health outcomes of arthritis, cancer, hypertension, diabetes, obesity, and asthma?
 
 # Data
 
@@ -32,7 +32,7 @@ healthcare_risk %>%
   names()
 ```
 
-Since this dataset provides numerous predictors, we want to see whether or not we can group individuals into underlying clusters based on similarities across risk factors. Our outcome of interest is to better understand what groupings of risk factors are associated with the seven outcomes:
+Since this dataset provides numerous predictors, we want to see whether or not we can group individuals into underlying classes based on similarities across risk factors. Our outcome of interest is to better understand what groupings of risk factors are associated with the seven outcomes:
 
 ```{r, echo=FALSE}
 library(viridis)
@@ -49,5 +49,23 @@ healthcare_risk %>%
 
 # Analysis Plan
 
-k-means clustering, or combination of k-means and k-modes clustering to account for both continuous (numeric) and categorical variables. Data will need to be preprocessed beforehand (i.e. standardized, so certain variables do not overpower others in the distance metric). ill add more later wooo.
+To explore whether individuals can be meaningfully grouped into underlying health categories based on their clinical and lifestyle characteristics, we will use a Latent Class Analysis (LCA). Our dataset contains both continuous variables (e.g., BMI, blood pressure, cholesterol) and categorical or ordinal variables (e.g., smoking status, alcohol intake, diet quality), which makes LCA more appropriate than a clustering method like k-Means.
+
+## Data Pre-processing
+
+In order to conduct LCA, we will need to clean and transform our data by:
+
+\begin{itemize}
+\item Either remove or impute missing values (depending on whether or not missingness is random)
+\item Identify any outliers in dataset, and remove outliers that are not biologically plausible
+\item Standardize all continuous predictors for interpretability
+\end{itemize}
+
+## Latent Class Analysis
+
+LCA will be used to identify unobserved subgroups of individuals who have similar risk profiles. We can fit LCA models with various numbers of classes, and select the model of best fit based on a chosen criterion (i.e. AIC). We can then assign each individual to their most probable class. 
+
+## Comparing Class Membership to Health Outcomes
+
+After exploring the specific features of each latent risk profile, we will compare classes based on the likelihood of having one of the six health outcomes mentioned above. We will conduct this analysis using regression (health outcome as the response variable, and latent classes as the predictors), with either logistic or multinomial regression. 
 
