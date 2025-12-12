@@ -1,0 +1,442 @@
+---
+title: "PBHLTH 245 Data Analysis"
+author: "Mira Terdiman & Angela Dimaano"
+output: "pdf_document"
+---
+
+```{r, echo=FALSE, include=FALSE}
+library(tidyverse)
+healthcare_risk <- read_csv("dirty_v3_path.csv") #this should work for you Angela as long as you make sure to pull dataset/all files before running.
+```
+
+# High-Level Data Cleaning
+
+```{r}
+#remove random/noise variables
+healthcare_risk_clean <- healthcare_risk %>%
+  select(-c(random_notes, noise_col))
+
+write.csv(healthcare_risk_clean, "healthcare_risk.csv", row.names = FALSE)
+
+#remove any rows with missing entries
+healthcare_risk_clean <- healthcare_risk_clean %>% drop_na()
+
+#select only continuous predictors for the first factor analysis
+healthcare_risk_cont <- healthcare_risk_clean %>%
+  select(Age, Glucose, `Blood Pressure`, BMI, `Oxygen Saturation`,
+    Cholesterol, Triglycerides, HbA1c,
+    `Physical Activity`, `Diet Score`,
+    `Stress Level`, `Sleep Hours`)
+```
+
+# Data Processing
+
+```{r}
+#standardize predictors
+stand <- function(v) (v - mean(v)) / sd(v)
+
+Xs <- apply(healthcare_risk_cont, 2, stand)
+
+#sample correlation matrix
+cor(Xs)
+```
+
+# Running Principal Component Factor Analysis
+
+## Eigen Decomposition
+
+```{r}
+#Eigen decomposition 
+
+fit1 <- eigen(cor(Xs))
+
+#eigen vectors and values
+fit1_vectors <- fit1$vectors
+fit1_values <- fit1$values
+
+rownames(fit1_vectors) <- colnames(healthcare_risk_cont)
+```
+
+## Determing "m"
+
+Before computing loadings for model, wanted to determine appropriate value for m, the number of factors. We want a decent amount of variance to be accounted for with smallest amount of factors. 
+
+```{r}
+library(psych)
+#scree plot
+plot(fit1_values, type = "b")
+#curve appears to flatten out at m = 5
+
+#parallel analysis (suggested on internet)
+fa.parallel(healthcare_risk_cont, fa = "pc")
+#suggested m = 4
+```
+
+Based on these findings, we can run two models (m = 4 and m = 5) and compare them.
+
+## Compute Loadings
+
+```{r}
+L1 <- fit1_vectors[,1] * sqrt(fit1_values[1])
+round(L1, 3)
+
+L2 <- fit1_vectors[,2] * sqrt(fit1_values[2])
+round(L2, 3)
+
+L3 <- fit1_vectors[,3] * sqrt(fit1_values[3])
+round(L3, 3)
+
+L4 <- fit1_vectors[,4] * sqrt(fit1_values[4])
+round(L4, 3)
+
+L5 <- fit1_vectors[,5] * sqrt(fit1_values[5])
+round(L5, 3)
+```
+
+## Compute communalities for m = 4, m = 5 models
+
+```{r}
+comm_m4 <- L1^2 + L2^2 + L3^2 + L4^2
+round(comm_m4, 3)
+
+comm_m5 <- L1^2 + L2^2 + L3^2 + L4^2 + L5^2
+round(comm_m5, 3)
+
+
+library(tibble)
+library(dplyr)
+
+table_m4 <- tibble(
+  Variable = rownames(fit1_vectors),
+  PC1 = round(L1, 3),
+  PC2 = round(L2, 3),
+  PC3 = round(L3, 3),
+  PC4 = round(L4, 3),
+  Communality_m4 = round(comm_m4, 3)
+)
+
+table_m4
+
+table_m5 <- tibble(
+  Variable = rownames(fit1_vectors),
+  PC1 = round(L1, 3),
+  PC2 = round(L2, 3),
+  PC3 = round(L3, 3),
+  PC4 = round(L4, 3),
+  PC5 = round(L5, 3),
+  Communality_m5 = round(comm_m5, 3)
+)
+
+table_m5
+```
+
+## Proportion of variance
+
+```{r}
+prop_m4 <- (sum(L1^2) + sum(L2^2) + sum(L3^2) + sum(L4^2)) / length(L1)
+prop_m4
+
+prop_m5 <- (sum(L1^2) + sum(L2^2) + sum(L3^2) + sum(L4^2) + sum(L5^2)) / length(L1)
+prop_m5
+```
+
+## Varimax rotation
+
+```{r}
+#m = 4
+loadings_m4 <- cbind(L1, L2, L3, L4)
+rot4 <- varimax(loadings_m4, normalize = FALSE)
+rot4
+
+#m = 5
+loadings_m5 <- cbind(L1, L2, L3, L4, L5)
+rot5 <- varimax(loadings_m5, normalize = FALSE)
+rot5
+
+```
+
+# Running Maximum Likelihood Factor Analysis
+
+## Running analysis
+
+```{r}
+#m = 4
+fa_ml_4 <- factanal(healthcare_risk_cont, factors = 4, rotation = "varimax", scores = "regression")
+
+#m = 5
+fa_ml_5 <- factanal(healthcare_risk_cont, factors = 5, rotation = "varimax", scores = "regression")
+```
+
+## Fit summaries
+
+```{r}
+load_m4 <- as.data.frame(fa_ml_4$loadings[,1:4])
+colnames(load_m4) <- paste0("F", 1:4)
+
+table_ml4 <- tibble(
+  Variable = rownames(load_m4),
+  F1_ML = round(load_m4$F1, 3),
+  F2_ML = round(load_m4$F2, 3),
+  F3_ML = round(load_m4$F3, 3),
+  F4_ML = round(load_m4$F4, 3),
+  Uniqueness = round(fa_ml_4$uniquenesses, 3)
+)
+
+table_ml4
+
+load_m5 <- as.data.frame(fa_ml_5$loadings[,1:5])
+colnames(load_m5) <- paste0("F", 1:5)
+
+table_ml5 <- tibble(
+  Variable = rownames(load_m5),
+  F1_ML = round(load_m5$F1, 3),
+  F2_ML = round(load_m5$F2, 3),
+  F3_ML = round(load_m5$F3, 3),
+  F4_ML = round(load_m5$F4, 3),
+  F5_ML = round(load_m5$F5, 3),
+  Uniqueness = round(fa_ml_5$uniquenesses, 3)
+)
+
+table_ml5
+```
+
+
+# Comparing Two Methods
+
+## m = 4 model
+
+```{r}
+comparison_m4 <- table_m4 %>%
+  select(Variable, PC1, PC2, PC3, PC4) %>%
+  left_join(
+    table_ml4 %>% select(Variable, F1_ML, F2_ML, F3_ML, F4_ML, Uniqueness),
+    by = "Variable"
+  )
+
+comparison_m4
+```
+
+## m = 5 model
+
+```{r}
+comparison_m5 <- table_m5 %>%
+  select(Variable, PC1, PC2, PC3, PC4, PC5) %>%
+  left_join(
+    table_ml5 %>% select(Variable, F1_ML, F2_ML, F3_ML, F4_ML, F5_ML, Uniqueness),
+    by = "Variable"
+  )
+
+comparison_m5
+```
+
+## Comparing Scores
+
+```{r}
+scores_pca <- as.data.frame(Xs %*% fit1_vectors[, 1:4])
+colnames(scores_pca) <- paste0("PC", 1:4)
+
+# ML factor scores (already from factanal with m = 4)
+scores_ml <- as.data.frame(fa_ml_4$scores)
+colnames(scores_ml) <- paste0("F", 1:4)
+
+scores_compare<- bind_cols(scores_pca, scores_ml)
+
+options(scipen = 999)   # turn off scientific notation
+
+# rounding EVERYTHING to 3–4 decimals (you choose)
+scores_pca_round <- round(scores_pca, 3)
+scores_ml_round <- round(scores_ml, 3)
+
+scores_compare_round <- bind_cols(scores_pca_round, scores_ml_round)
+
+# Correlations between PCA and MLFA scores
+cor(scores_compare_round)
+
+library(ggplot2)
+
+for (i in 1:4) {
+  p <- ggplot(scores_compare,
+              aes_string(x = paste0("PC", i), y = paste0("F", i))) +
+    geom_point(alpha = 0.3) +
+    geom_smooth(method = "lm", se = FALSE) +
+    labs(
+      title = paste("PC", i, "vs ML Factor", i),
+      x = paste("PCA score (PC", i, ")", sep = ""),
+      y = paste("ML factor score (F", i, ")", sep = "")
+    )
+  print(p)
+}
+```
+
+To evaluate how closely the two extraction methods recover similar latent structure, we compared the PCA scores (PC1–PC4) obtained via eigen-decomposition with the MLFA regression scores (F1–F4). The correlation matrix shows several clear patterns. First, PC1 is strongly negatively correlated with both F1 (r = –0.551) and F3 (r = –0.554), and moderately with F2 (r = –0.744), indicating that PCA’s first component blends variance coming from multiple underlying latent constructs. In contrast, MLFA separates these influences across factors, which aligns with the more interpretable loading patterns observed previously.
+
+Second, PC2 correlates positively with F1 (r = 0.641) and negatively with F3 (r = –0.701), suggesting that PCA’s second component captures a mixture of glycemic-related variance (F1) and age/BP-related variance (F3), but again does not isolate these domains as cleanly as the MLFA solution. PC3 shows modest correlations with F1 (r = 0.431) and F4 (r = –0.588), while PC4 is moderately correlated with F2 (r = 0.281) and strongly negatively correlated with F4 (r = –0.703). Altogether, these patterns indicate that while PCA components reflect broad variance gradients, they do not map cleanly onto the interpretable physiological constructs that emerge under MLFA.
+
+In summary, the factor score comparison demonstrates that MLFA provides a more distinct and psychologically interpretable separation of latent health domains, whereas PCA components are mixtures of multiple ML factors. This supports the decision to use MLFA factors in the downstream regression analyses and for conceptual interpretation of latent health profiles.
+
+Given goal of this project, going to move forward with MLE structure.
+
+# Running regression with factors
+
+```{r}
+library(nnet)
+library(broom)
+
+healthcare_risk_fa_reg <- healthcare_risk_clean %>%
+  select(Age, Glucose, `Blood Pressure`, BMI, `Oxygen Saturation`,
+    Cholesterol, Triglycerides, HbA1c,
+    `Physical Activity`, `Diet Score`,
+    `Stress Level`, `Sleep Hours`, `Medical Condition`)
+
+scores_ml <- as.data.frame(fa_ml_4$scores) #this was already run on only continuous variables
+colnames(scores_ml) <- paste0("F", 1:4)
+
+final_reg_data <- bind_cols(healthcare_risk_fa_reg, scores_ml)
+
+#setting "healthy" as reference
+final_reg_data <- final_reg_data %>%
+  mutate(MedicalCondition = relevel(
+    factor(`Medical Condition`),
+    ref = "Healthy"
+  ))
+
+# run regression
+reg_fit <- multinom(
+  MedicalCondition ~ F1 + F2 + F3 + F4,
+  data = final_reg_data
+)
+```
+
+## Regression Output
+
+```{r}
+reg_results <- tidy(reg_fit, exponentiate = TRUE, conf.int = TRUE)
+reg_results
+```
+
+```{r}
+#scaling factors since regression output is not realistic
+final_reg_data_scale <- final_reg_data %>%
+  mutate(
+    F1 = scale(F1),
+    F2 = scale(F2),
+    F3 = scale(F3),
+    F4 = scale(F4)
+  )
+
+reg_fit_scale <- multinom(
+  MedicalCondition ~ F1 + F2 + F3 + F4,
+  data = final_reg_data_scale
+)
+
+reg_results_scale <- tidy(reg_fit_scale, exponentiate = TRUE, conf.int = TRUE)
+reg_results_scale
+
+```
+
+Still have huge RRRs, checking class separation:
+
+```{r}
+library(ggplot2)
+
+ggplot(final_reg_data, aes(x = F1, color = MedicalCondition)) +
+  geom_density()
+
+for (i in 1:4) {
+  print(
+    ggplot(final_reg_data, aes_string(x = paste0("F", i), color = "MedicalCondition")) +
+      geom_density() +
+      ggtitle(paste("Distribution of F", i, "by Condition"))
+  )
+}
+```
+
+
+# Running regularized multinomial logistic regression, which can handle separation
+
+```{r}
+library(glmnet)
+X <- as.matrix(final_reg_data[, c("F1","F2","F3","F4")])
+y <- final_reg_data$MedicalCondition
+
+fit_reg_glm <- cv.glmnet(
+  X, y,
+  family = "multinomial",
+  alpha = 1
+)
+
+fit_reg_glm$lambda.min
+coef(fit_reg_glm, s = "lambda.min")
+```
+
+## Interpretation
+
+Regularized multinomial logistic regression was used to estimate the relationship between the four ML-derived latent health factors (F1–F4) and medical condition categories. Because glmnet applies L1 regularization (lasso), many coefficients are shrunk toward zero or set exactly to zero (.), yielding a sparse and interpretable structure. Below, coefficients reflect the log relative risk of belonging to a given disease class (vs. the implicit baseline used by glmnet) per one-unit increase in each factor score.
+
+1. Diabetes
+
+Diabetes shows the strongest and clearest pattern.
+
+F1 has a large positive coefficient (7.32), meaning higher values on the glycemic/metabolic factor strongly increase the likelihood of diabetes.
+
+Modest additional positive contributions from F2 and F3 indicate that dyslipidemia and age/BP-related physiology also play roles.
+
+F4 is effectively zero, meaning this factor does not help distinguish diabetes.
+
+This aligns with the density plots: F1 nearly separates diabetics from all other groups.
+
+2. Hypertension
+
+Hypertension is primarily associated with F3 (3.29), a factor that appears to capture age, blood pressure, and cardiometabolic load.
+
+F1 and F4 are shrunken close to zero.
+
+F2 is removed entirely, meaning lipids/BMI do not distinguish hypertensives once other factors are controlled.
+
+This is consistent with clinical expectations: latent BP/age physiology is the primary driver of this class.
+
+3. Obesity
+
+Obesity is most strongly associated with F2 (5.24), the factor with heavy loadings on BMI, triglycerides, and diet.
+
+F1 is removed, meaning glycemic regulation does not differentiate obesity from other groups.
+
+F3 has a moderate negative effect, implying that individuals with obesity tend to score lower on the BP/age factor compared with other disease groups.
+
+This shows that F2 represents an adiposity/dyslipidemia construct that uniquely predicts obesity.
+
+4. Arthritis
+
+Arthritis shows a mixed profile:
+
+A moderate positive association with F4 (1.96), possibly reflecting stress/sleep physiology.
+
+F1 is negative, suggesting people with arthritis tend to have lower glycemic factor scores than other disease groups.
+
+Small positive contribution from F3 (0.80), reflecting the age-related component of arthritis.
+
+This pattern indicates that arthritis is a more heterogeneous condition with weaker alignment to classic cardiometabolic factors.
+
+5. Asthma
+
+Asthma has consistently negative coefficients across F1–F4.
+This indicates individuals with asthma tend to have lower latent cardiometabolic risk profiles than other groups.
+This makes sense: asthma is largely orthogonal to the physiological domains captured by these factors.
+
+6. Cancer
+
+Cancer shows small to moderate coefficients:
+
+Positive association with F1, negative with F2 and F4, and no contribution from F3 (lasso sets it to zero).
+This suggests cancer patients' profiles differ subtly but not strongly across these latent physiological domains.
+
+7. Healthy
+
+The “Healthy” class serves as a natural contrast group:
+
+Large negative coefficients across all factors simply indicate that higher cardiometabolic or stress-related scores decrease the likelihood of being in the healthy category.
+
+This reflects the expected pattern: lower factor scores correspond to better overall physiological status.
+
+# Latent Profile Analysis
+
